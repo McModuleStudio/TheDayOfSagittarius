@@ -25,5 +25,12 @@ public abstract class Entity {
 	}
 
 	protected abstract void onRender();
+	
+	public boolean isFriend() {
+		return false;
+	}
+	
+	public abstract double getSize();
+
 
 }

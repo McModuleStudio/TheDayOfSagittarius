@@ -20,4 +20,12 @@ public class EntityShip extends Entity {
 		GL11.glEnd();
 	}
 
+	public boolean isFriend() {
+		return true;
+	}
+
+	@Override
+	public double getSize() {
+		return size;
+	}
 }

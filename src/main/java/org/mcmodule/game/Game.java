@@ -1,5 +1,8 @@
 package org.mcmodule.game;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.ContextAttribs;
@@ -21,6 +24,8 @@ public class Game implements Runnable {
 	private int width, height;
 	
 	private Entity currentEntity = new EntityShip(0, 0);
+	
+	private List<Entity> entities = new ArrayList<>();
 	
 	private double cameraX, cameraY;
 	
@@ -62,6 +67,7 @@ public class Game implements Runnable {
 		GL11.glEndList();
 		checkGLError("Pre startup");
 		Keyboard.create();
+		entities.add(currentEntity);
 	}
 	
 	private void runLoop() {
@@ -75,7 +81,11 @@ public class Game implements Runnable {
 		GL11.glTranslated(0, 0, -1000);
 		GL11.glViewport(0, 0, width, height);
 		GL11.glClearColor(0, 0.05f, 0.10f, 1);
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		GL11.glEnable(GL11.GL_BLEND);
+		GL11.glEnable(GL11.GL_ALPHA_TEST);
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+		GL11.glStencilMask(0x00);
 		checkGLError("Pre Render");
 		GL11.glTranslated(width / 2D, height / 2D, 0);
 		GL11.glTranslated(-cameraX, -cameraY, 0);
@@ -83,6 +93,30 @@ public class Game implements Runnable {
 		GL11.glTranslated(-MAP_WIDTH / 2D, -MAP_HEIGHT / 2D, 0);
 		GL11.glColor4f(0, 0.5f, 0.25f, 1);
 		GL11.glCallList(gridList);
+		GL11.glPushMatrix();
+		GL11.glTranslated(MAP_WIDTH / 2D, MAP_HEIGHT / 2D, 0);
+		GL11.glEnable(GL11.GL_STENCIL_TEST);
+		GL11.glStencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_REPLACE);
+		GL11.glStencilMask(0xFF);
+		GL11.glClear(GL11.GL_STENCIL_BUFFER_BIT);
+		GL11.glStencilFunc(GL11.GL_ALWAYS, 1, 0xFF);
+		GL11.glColor4f(1, 1, 1, 0);
+		GL11.glEnable(GL11.GL_POINT_SMOOTH);
+		for (Entity entity : entities) {
+			if(entity.isFriend()) {
+				double x = entity.posX,
+					   y = entity.posY;
+				double size = entity.getSize() * 1.25;
+				GL11.glBegin(GL11.GL_POLYGON);
+				for(int i=0;i<90;i++) {
+					GL11.glVertex2d(x + size * Math.cos(2 * Math.PI * i / 90d), y + size * Math.sin(2 * Math.PI * i / 90d));
+				}
+				GL11.glEnd();
+			}
+		}
+		GL11.glPopMatrix();
+		GL11.glStencilFunc(GL11.GL_EQUAL, 1, 0xFF);
+		GL11.glStencilMask(0x00);
 		GL11.glColor4f(0, 0.75f, 0.25f, 1);
 		GL11.glCallList(gridList);
 		GL11.glPopMatrix();
@@ -90,6 +124,7 @@ public class Game implements Runnable {
 		if(currentEntity != null) {
 			currentEntity.doRender();
 		}
+		GL11.glDisable(GL11.GL_STENCIL_TEST);
 		checkGLError("Post Render");
 		while(System.currentTimeMillis() - lastUpdate >= 50L) {
 			onTick();

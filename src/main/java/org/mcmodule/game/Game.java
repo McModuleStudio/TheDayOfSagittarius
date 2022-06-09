@@ -2,15 +2,17 @@ package org.mcmodule.game;
 
 import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.ContextAttribs;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.PixelFormat;
 import org.mcmodule.game.entity.Entity;
 import org.mcmodule.game.entity.EntityShip;
 
 public class Game implements Runnable {
 
-	private static final int MAP_WIDTH = 8192, MAP_HEIGHT = 2048;
+	private static final int MAP_WIDTH = 16384, MAP_HEIGHT = 65536;
 	
 	private boolean running = true;
 
@@ -43,7 +45,7 @@ public class Game implements Runnable {
 
 	private void init() throws LWJGLException {
 		Display.setDisplayMode(new DisplayMode(1280, 720));
-		Display.create();
+		Display.create(new PixelFormat(), new ContextAttribs().withDebug(true));
 		Display.setSwapInterval(1);
 		gridList = GL11.glGenLists(1);
 		GL11.glNewList(gridList, GL11.GL_COMPILE);
@@ -75,6 +77,8 @@ public class Game implements Runnable {
 		GL11.glClearColor(0, 0.05f, 0.10f, 1);
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 		checkGLError("Pre Render");
+		GL11.glTranslated(width / 2D, height / 2D, 0);
+		GL11.glTranslated(-cameraX, -cameraY, 0);
 		GL11.glPushMatrix();
 		GL11.glTranslated(-MAP_WIDTH / 2D, -MAP_HEIGHT / 2D, 0);
 		GL11.glColor4f(0, 0.5f, 0.25f, 1);
@@ -82,9 +86,7 @@ public class Game implements Runnable {
 		GL11.glColor4f(0, 0.75f, 0.25f, 1);
 		GL11.glCallList(gridList);
 		GL11.glPopMatrix();
-		GL11.glTranslated(width / 2D, height / 2D, 0);
 		checkGLError("Grid");
-		GL11.glTranslated(-cameraX, -cameraY, 0);
 		if(currentEntity != null) {
 			currentEntity.doRender();
 		}
@@ -103,10 +105,10 @@ public class Game implements Runnable {
 		}
 		if(currentEntity != null) {
 			if(Keyboard.isKeyDown(Keyboard.KEY_W)) {
-				currentEntity.move(1D);
+				currentEntity.move(4D);
 			}
 			if(Keyboard.isKeyDown(Keyboard.KEY_S)) {
-				currentEntity.move(-1D);
+				currentEntity.move(-4D);
 			}
 			if(Keyboard.isKeyDown(Keyboard.KEY_A)) {
 				currentEntity.yaw--;
@@ -114,6 +116,7 @@ public class Game implements Runnable {
 			if(Keyboard.isKeyDown(Keyboard.KEY_D)) {
 				currentEntity.yaw++;
 			}
+//			cameraX = currentEntity.posX; cameraY = currentEntity.posY;
 		}
 	}
 

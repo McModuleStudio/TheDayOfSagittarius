@@ -10,6 +10,7 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
+import org.lwjgl.util.glu.GLU;
 import org.mcmodule.game.entity.Entity;
 import org.mcmodule.game.entity.EntityShip;
 
@@ -68,6 +69,7 @@ public class Game implements Runnable {
 		checkGLError("Pre startup");
 		Keyboard.create();
 		entities.add(currentEntity);
+//		entities.add(new EntityShip(0, 0));
 	}
 	
 	private void runLoop() {
@@ -101,12 +103,11 @@ public class Game implements Runnable {
 		GL11.glClear(GL11.GL_STENCIL_BUFFER_BIT);
 		GL11.glStencilFunc(GL11.GL_ALWAYS, 1, 0xFF);
 		GL11.glColor4f(1, 1, 1, 0);
-		GL11.glEnable(GL11.GL_POINT_SMOOTH);
 		for (Entity entity : entities) {
 			if(entity.isFriend()) {
 				double x = entity.posX,
 					   y = entity.posY;
-				double size = entity.getSize() * 1.25;
+				double size = entity.getSize() * 1.5;
 				GL11.glBegin(GL11.GL_POLYGON);
 				for(int i=0;i<90;i++) {
 					GL11.glVertex2d(x + size * Math.cos(2 * Math.PI * i / 90d), y + size * Math.sin(2 * Math.PI * i / 90d));
@@ -117,13 +118,21 @@ public class Game implements Runnable {
 		GL11.glPopMatrix();
 		GL11.glStencilFunc(GL11.GL_EQUAL, 1, 0xFF);
 		GL11.glStencilMask(0x00);
+		GL11.glColor4f(0, 0.05f, 0.125f, 1);
+		GL11.glBegin(GL11.GL_QUADS);
+		GL11.glVertex2d(-MAP_WIDTH * 2D,  MAP_HEIGHT * 2D);
+		GL11.glVertex2d( MAP_WIDTH * 2D,  MAP_HEIGHT * 2D);
+		GL11.glVertex2d( MAP_WIDTH * 2D, -MAP_HEIGHT * 2D);
+		GL11.glVertex2d(-MAP_WIDTH * 2D, -MAP_HEIGHT * 2D);
+		GL11.glEnd();
 		GL11.glColor4f(0, 0.75f, 0.25f, 1);
 		GL11.glCallList(gridList);
 		GL11.glPopMatrix();
 		checkGLError("Grid");
-		if(currentEntity != null) {
-			currentEntity.doRender();
+		for (Entity entity : entities) {
+			entity.doRender();
 		}
+		checkGLError("Render entity");
 		GL11.glDisable(GL11.GL_STENCIL_TEST);
 		checkGLError("Post Render");
 		while(System.currentTimeMillis() - lastUpdate >= 50L) {
@@ -162,7 +171,7 @@ public class Game implements Runnable {
 	public static void checkGLError(String location) {
 		int code = GL11.glGetError();
 		if(code != GL11.GL_NO_ERROR) {
-			System.err.printf("====================\nGLError: %d(%s)\nLocation: %s\n====================\n", code, GL11.glGetString(code), location);
+			System.err.printf("====================\nGLError: %d(%s)\nLocation: %s\n====================\n", code, GLU.gluErrorString(code), location);
 		}
 	}
 

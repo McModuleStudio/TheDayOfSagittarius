@@ -1,34 +1,48 @@
-package org.mcmodule.game;
+package org.mcmodule.game.client;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.ContextAttribs;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.PixelFormat;
 import org.lwjgl.util.glu.GLU;
+import org.mcmodule.game.client.gui.Gui;
+import org.mcmodule.game.client.gui.GuiIngame;
+import org.mcmodule.game.client.gui.Overlay;
 import org.mcmodule.game.entity.Entity;
 import org.mcmodule.game.entity.EntityShip;
+import org.mcmodule.game.util.EnumTeam;
+
+import lombok.Getter;
 
 public class Game implements Runnable {
 
-	private static final int MAP_WIDTH = 16384, MAP_HEIGHT = 65536;
+	public static final int MAP_WIDTH = 16384,
+							MAP_HEIGHT = 65536;
 	
 	private boolean running = true;
 
+	@Getter
 	private int gridList;
 	
-	private int width, height;
+	public int width, height;
 	
-	private Entity currentEntity = new EntityShip(0, 0);
+	private Entity currentEntity = new EntityShip(0, 0, EnumTeam.Red);
 	
+	@Getter
 	private List<Entity> entities = new ArrayList<>();
 	
+	@Getter 
 	private double cameraX, cameraY;
+	
+	public Gui currentGui = new GuiIngame(this);
+	public Overlay currentOverlay = null;
 	
 	long lastUpdate;
 	
@@ -69,7 +83,7 @@ public class Game implements Runnable {
 		checkGLError("Pre startup");
 		Keyboard.create();
 		entities.add(currentEntity);
-//		entities.add(new EntityShip(0, 0));
+		entities.add(new EntityShip(0, 0, EnumTeam.Blue));
 	}
 	
 	private void runLoop() {
@@ -87,53 +101,10 @@ public class Game implements Runnable {
 		GL11.glEnable(GL11.GL_BLEND);
 		GL11.glEnable(GL11.GL_ALPHA_TEST);
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+		GL11.glDisable(GL11.GL_TEXTURE_2D);
 		GL11.glStencilMask(0x00);
 		checkGLError("Pre Render");
-		GL11.glTranslated(width / 2D, height / 2D, 0);
-		GL11.glTranslated(-cameraX, -cameraY, 0);
-		GL11.glPushMatrix();
-		GL11.glTranslated(-MAP_WIDTH / 2D, -MAP_HEIGHT / 2D, 0);
-		GL11.glColor4f(0, 0.5f, 0.25f, 1);
-		GL11.glCallList(gridList);
-		GL11.glPushMatrix();
-		GL11.glTranslated(MAP_WIDTH / 2D, MAP_HEIGHT / 2D, 0);
-		GL11.glEnable(GL11.GL_STENCIL_TEST);
-		GL11.glStencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_REPLACE);
-		GL11.glStencilMask(0xFF);
-		GL11.glClear(GL11.GL_STENCIL_BUFFER_BIT);
-		GL11.glStencilFunc(GL11.GL_ALWAYS, 1, 0xFF);
-		GL11.glColor4f(1, 1, 1, 0);
-		for (Entity entity : entities) {
-			if(entity.isFriend()) {
-				double x = entity.posX,
-					   y = entity.posY;
-				double size = entity.getSize() * 1.5;
-				GL11.glBegin(GL11.GL_POLYGON);
-				for(int i=0;i<90;i++) {
-					GL11.glVertex2d(x + size * Math.cos(2 * Math.PI * i / 90d), y + size * Math.sin(2 * Math.PI * i / 90d));
-				}
-				GL11.glEnd();
-			}
-		}
-		GL11.glPopMatrix();
-		GL11.glStencilFunc(GL11.GL_EQUAL, 1, 0xFF);
-		GL11.glStencilMask(0x00);
-		GL11.glColor4f(0, 0.05f, 0.125f, 1);
-		GL11.glBegin(GL11.GL_QUADS);
-		GL11.glVertex2d(-MAP_WIDTH * 2D,  MAP_HEIGHT * 2D);
-		GL11.glVertex2d( MAP_WIDTH * 2D,  MAP_HEIGHT * 2D);
-		GL11.glVertex2d( MAP_WIDTH * 2D, -MAP_HEIGHT * 2D);
-		GL11.glVertex2d(-MAP_WIDTH * 2D, -MAP_HEIGHT * 2D);
-		GL11.glEnd();
-		GL11.glColor4f(0, 0.75f, 0.25f, 1);
-		GL11.glCallList(gridList);
-		GL11.glPopMatrix();
-		checkGLError("Grid");
-		for (Entity entity : entities) {
-			entity.doRender();
-		}
-		checkGLError("Render entity");
-		GL11.glDisable(GL11.GL_STENCIL_TEST);
+		currentGui.render();
 		checkGLError("Post Render");
 		while(System.currentTimeMillis() - lastUpdate >= 50L) {
 			onTick();
@@ -144,9 +115,8 @@ public class Game implements Runnable {
 	}
 	
 	private void onTick() {
-		while(Keyboard.next()) {
-			
-		}
+		while(Keyboard.next());
+		while(Mouse.next());
 		if(currentEntity != null) {
 			if(Keyboard.isKeyDown(Keyboard.KEY_W)) {
 				currentEntity.move(4D);
@@ -155,13 +125,15 @@ public class Game implements Runnable {
 				currentEntity.move(-4D);
 			}
 			if(Keyboard.isKeyDown(Keyboard.KEY_A)) {
-				currentEntity.yaw--;
+				currentEntity.setRotation(currentEntity.yaw-1);
 			}
 			if(Keyboard.isKeyDown(Keyboard.KEY_D)) {
-				currentEntity.yaw++;
+				currentEntity.setRotation(currentEntity.yaw+1);
 			}
 //			cameraX = currentEntity.posX; cameraY = currentEntity.posY;
 		}
+		currentGui.onTick();
+//		System.out.println(entities.get(1).getBoundingBox().isBoxInBoundingBox(currentEntity.getBoundingBox()));
 	}
 
 	private void destroy() {
